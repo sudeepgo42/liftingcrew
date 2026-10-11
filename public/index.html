@@ -111,9 +111,34 @@ nav.tabs button[aria-current="page"]{color:var(--ink);border-top-color:var(--acc
 .spinner{display:inline-block;width:14px;height:14px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:spin .8s linear infinite;vertical-align:-2px;margin-right:6px}
 @keyframes spin{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.spinner{animation:none}}
+
+/* ---------- intro ---------- */
+.intro{position:fixed;inset:0;z-index:20;background:var(--ink);color:var(--bg);display:flex;flex-direction:column;justify-content:center;gap:28px;
+  padding:calc(env(safe-area-inset-top,0px) + 32px) 28px calc(env(safe-area-inset-bottom,0px) + 32px);transition:opacity .45s ease,transform .45s ease;cursor:pointer}
+.intro.out{opacity:0;transform:translateY(-14px);pointer-events:none}
+.intro-inner{max-width:560px;width:100%;margin:0 auto}
+.intro svg{display:block;width:100%;max-width:340px;height:auto;margin-bottom:34px}
+.intro .rod{stroke:var(--bg);stroke-width:4;stroke-linecap:round;opacity:.55}
+.intro .pl{opacity:0;animation:plateIn .42s cubic-bezier(.2,.9,.3,1.25) forwards}
+.intro .pl.l{--from:-46px}.intro .pl.r{--from:46px}
+.intro blockquote{margin:0;font-family:var(--display);font-weight:700;font-size:clamp(32px,8.5vw,54px);line-height:1.06;letter-spacing:-.005em}
+.intro .w{display:inline-block;opacity:0;transform:translateY(.35em);animation:wordIn .5s ease forwards}
+.intro cite{display:block;margin-top:18px;font-style:normal;font-size:16px;opacity:0;animation:fadeIn .6s ease forwards}
+.intro .go{margin-top:36px;background:var(--accent);color:#fff;border:none;border-radius:10px;padding:13px 22px;font-weight:600;font-size:16px;opacity:0;animation:fadeIn .5s ease forwards}
+@keyframes plateIn{from{opacity:0;transform:translateX(var(--from))}to{opacity:1;transform:none}}
+@keyframes wordIn{to{opacity:1;transform:none}}
+@keyframes fadeIn{to{opacity:.85}}
+.intro .go{animation-name:goIn}
+@keyframes goIn{to{opacity:1}}
+@media (prefers-reduced-motion:reduce){
+  .intro .pl,.intro .w,.intro cite,.intro .go{animation:none;opacity:1;transform:none}
+  .intro cite{opacity:.85}
+  .intro{transition:opacity .2s}
+}
 </style>
 </head>
 <body>
+<div class="intro" id="intro" role="dialog" aria-label="Today's quote" hidden></div>
 <div class="wrap" id="app"></div>
 <nav class="tabs" aria-label="Sections"><div id="tabs"></div></nav>
 <div id="toast" role="status" aria-live="polite"></div>
@@ -480,8 +505,71 @@ document.addEventListener('change',ev=>{if(ev.target.id==='date'&&ev.target.valu
 document.addEventListener('keydown',ev=>{if(ev.key==='Enter'&&ev.target.id==='code'){ev.preventDefault();document.querySelector('[data-act="unlock"]').click();}
   if(ev.key==='Enter'&&ev.target.id==='newname'){ev.preventDefault();document.querySelector('[data-act="addname"]').click();}});
 
+
+/* ---------- intro quote ---------- */
+const QUOTES=[
+ ['We suffer more often in imagination than in reality.','Seneca'],
+ ['It is not that we have a short time to live, but that we waste a lot of it.','Seneca'],
+ ['First say to yourself what you would be; and then do what you have to do.','Epictetus'],
+ ['Difficulties are things that show what men are.','Epictetus'],
+ ['No man is free who is not master of himself.','Epictetus'],
+ ['No longer talk at all about the kind of man that a good man ought to be, but be such.','Marcus Aurelius'],
+ ['Well begun is half done.','Aristotle'],
+ ['We are what we repeatedly do. Excellence, then, is not an act, but a habit.','Will Durant'],
+ ['Iron sharpeneth iron; so a man sharpeneth the countenance of his friend.','Proverbs 27:17'],
+ ['If you want to go fast, go alone. If you want to go far, go together.','African proverb'],
+ ['Alone we can do so little; together we can do so much.','Helen Keller'],
+ ['Fall seven times, stand up eight.','Japanese proverb'],
+ ['Little by little, a little becomes a lot.','Tanzanian proverb'],
+ ['A journey of a thousand miles begins with a single step.','Laozi'],
+ ['Do what you can, with what you have, where you are.','Theodore Roosevelt'],
+ ['Our greatest glory is not in never falling, but in rising every time we fall.','Oliver Goldsmith'],
+ ['The harder the conflict, the more glorious the triumph.','Thomas Paine'],
+ ['Patience and perseverance have a magical effect before which difficulties disappear and obstacles vanish.','John Quincy Adams'],
+ ['Energy and persistence conquer all things.','Benjamin Franklin'],
+ ['Strength does not come from physical capacity. It comes from an indomitable will.','Mahatma Gandhi'],
+ ['Hard work beats talent when talent doesn’t work hard.','Tim Notke'],
+ ['Begin, be bold, and venture to be wise.','Horace'],
+ ['Rome was not built in a day.','Proverb'],
+ ['Strength and growth come only through continuous effort and struggle.','Napoleon Hill']
+];
+function pickQuote(){
+  const last=parseInt(ls('crew-lifts-quote')||'-1',10);
+  let i=Math.floor(Math.random()*QUOTES.length);
+  if(QUOTES.length>1&&i===last)i=(i+1+Math.floor(Math.random()*(QUOTES.length-1)))%QUOTES.length;
+  ls('crew-lifts-quote',String(i));
+  return QUOTES[i];
+}
+function showIntro(){
+  const el=document.getElementById('intro');if(!el)return;
+  const [q,a]=pickQuote();
+  // Barbell: plates slide on from the outside in, then the quote reads in word by word.
+  const L=[[0,52,'#2F8A4C'],[14,60,'#D9A21B'],[28,70,'#2457A8'],[42,80,'#C8312B']];
+  let plates='';
+  L.forEach(([x,h,c],k)=>{
+    const d=(.05+(3-k)*.09).toFixed(2)+'s';
+    plates+='<rect class="pl l" x="'+(40+x)+'" y="'+(50-h/2)+'" width="11" height="'+h+'" rx="2" fill="'+c+'" style="animation-delay:'+d+'"/>';
+    plates+='<rect class="pl r" x="'+(289-x)+'" y="'+(50-h/2)+'" width="11" height="'+h+'" rx="2" fill="'+c+'" style="animation-delay:'+d+'"/>';
+  });
+  const words=q.split(' ');
+  const start=.55,step=.055;
+  const quoteHtml=words.map((w,k)=>'<span class="w" style="animation-delay:'+(start+k*step).toFixed(3)+'s">'+esc(w)+'</span>').join(' ');
+  const end=start+words.length*step;
+  el.innerHTML='<div class="intro-inner"><svg viewBox="0 0 340 100" aria-hidden="true"><line class="rod" x1="8" y1="50" x2="332" y2="50"/>'+plates+'</svg>'+
+    '<blockquote>'+quoteHtml+'</blockquote><cite style="animation-delay:'+(end+.15).toFixed(2)+'s">– '+esc(a)+'</cite>'+
+    '<button class="go" style="animation-delay:'+(end+.4).toFixed(2)+'s">Start training</button></div>';
+  el.hidden=false;
+  let done=false;
+  const close=()=>{if(done)return;done=true;el.classList.add('out');setTimeout(()=>{el.hidden=true;el.innerHTML='';},460);document.removeEventListener('keydown',onKey);};
+  const onKey=e=>{if(e.key==='Escape'||e.key==='Enter'||e.key===' ')close();};
+  el.addEventListener('click',close);
+  document.addEventListener('keydown',onKey);
+  setTimeout(()=>{const b=el.querySelector('.go');if(b)b.focus({preventScroll:true});},50);
+}
+
 /* ---------- boot ---------- */
 S.person=ls('crew-lifts-person');
+showIntro();
 render();
 refresh();
 setInterval(()=>{if(document.visibilityState==='visible'&&S.boot==='ready'&&!S.adapting&&!S.saving)refresh();},30000);
