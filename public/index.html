@@ -145,7 +145,7 @@ function toast(msg){const t=document.getElementById('toast');t.innerHTML='<div c
 const CODE_KEY='crew-lifts-code',PENDING_KEY='crew-lifts-pending';
 function code(){return ls(CODE_KEY)||'';}
 async function api(path,body){
-  const r=await fetch('/api/'+path,{method:body?'POST':'GET',headers:Object.assign({'x-crew-code':code()},body?{'content-type':'application/json'}:{}),body:body?JSON.stringify(body):undefined,cache:'no-store'});
+  const r=await fetch('/api/'+path,{method:body?'POST':'GET',headers:Object.assign({'x-crew-code':encodeURIComponent(code())},body?{'content-type':'application/json'}:{}),body:body?JSON.stringify(body):undefined,cache:'no-store'});
   if(r.status===401){const e=new Error('locked');e.code='locked';throw e;}
   const j=await r.json().catch(()=>({}));
   if(!r.ok){const e=new Error(j.error||'Request failed');e.code=j.code||'server';throw e;}
@@ -173,8 +173,8 @@ async function refresh(){
     if(S.person&&!crewNames().includes(S.person))S.person=null;
     S.boot='ready';S.logsLoaded=true;S.offline=false;
   }catch(e){
-    if(e.code==='locked'){S.boot='locked';}
-    else{S.offline=true;if(S.boot==='loading'){const c=cacheGet();if(c){S.program=c.program;S.crew=c.crew;S.logs=mergePending(c.logs||[]);S.boot='ready';S.logsLoaded=true;}else S.boot='error';}}
+    if(e.code==='locked'){S.lockMsg=code()?'That code did not match. Codes are case-sensitive.':'';S.boot='locked';}
+    else{S.offline=true;S.errMsg=e.message&&e.message!=='Failed to fetch'?e.message+'.':'';if(S.boot==='loading'){const c=cacheGet();if(c){S.program=c.program;S.crew=c.crew;S.logs=mergePending(c.logs||[]);S.boot='ready';S.logsLoaded=true;}else S.boot='error';}}
   }
   if(S.boot==='ready'&&!S.offline)cacheSet();
   render();
@@ -230,8 +230,8 @@ function render(){
   try{sel=fid&&a.selectionStart!=null?[a.selectionStart,a.selectionEnd]:null;}catch(e){}
   let html='<div class="brand"><b>Crew Lifts</b><small>'+esc(S.program&&S.program.version?'Programme v'+S.program.version:'')+'</small></div>';
   if(S.boot==='loading'){html+='<p class="muted"><span class="spinner"></span>Loading the crew’s data</p>';}
-  else if(S.boot==='locked'){html+='<div class="hero"><h1>Crew only</h1><p>Enter the crew code to see and log sessions.</p></div><div class="row"><input type="password" id="code" autocomplete="current-password" placeholder="Crew code" style="flex:1"><button class="btn accent" data-act="unlock">Unlock</button></div>';}
-  else if(S.boot==='error'){html+='<div class="note warn"><b>Could not reach the server.</b><p class="muted small">Check your connection, then reload.</p></div>';}
+  else if(S.boot==='locked'){html+='<div class="hero"><h1>Crew only</h1><p>Enter the crew code to see and log sessions.</p></div><div class="row"><input type="password" id="code" autocomplete="current-password" placeholder="Crew code" style="flex:1"><button class="btn accent" data-act="unlock">Unlock</button></div>'+(S.lockMsg?'<p class="small down">'+esc(S.lockMsg)+'</p>':'');}
+  else if(S.boot==='error'){html+='<div class="note warn"><b>The server did not respond properly.</b><p class="muted small">'+esc(S.errMsg||'Check your connection, then reload.')+' Open /api/health on this site to see what is missing.</p></div>';}
   else{
     if(S.offline)html+='<div class="note warn small">Offline. Sessions you save are kept on this phone and sync when you reconnect.</div>';
     else if(pending().length)html+='<div class="note warn small">'+pending().length+' change(s) waiting to sync.</div>';

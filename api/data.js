@@ -1,4 +1,4 @@
-import { redis, authorised, send } from './_lib.js';
+import { getRedis, authorised, send } from './_lib.js';
 import { SEED_PROGRAM, SEED_CREW } from './_seed.js';
 
 const K = { program: 'crew:program', crew: 'crew:members', logs: 'crew:logs', snapshots: 'crew:snapshots' };
@@ -24,7 +24,12 @@ function cleanLog(l) {
 }
 
 export default async function handler(req, res) {
+  let redis;
   if (!authorised(req)) return send(res, 401, { error: 'Crew code required', code: 'locked' });
+  const dbConfigured = (process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL) && (process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN);
+  try { if (!dbConfigured) throw new Error('missing'); redis = getRedis(); } catch (e) {
+    return send(res, 500, { error: 'Database is not connected. Add the Upstash integration in Vercel Storage, then redeploy', code: 'no_db' });
+  }
   try {
     if (req.method === 'GET') {
       let [program, crew, logMap] = await Promise.all([redis.get(K.program), redis.get(K.crew), redis.hgetall(K.logs)]);
