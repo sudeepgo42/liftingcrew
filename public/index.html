@@ -1,0 +1,493 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Crew Lifts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#ECEEEA; --surface:#FFFFFF; --sunk:#F5F6F3; --ink:#1B2024; --muted:#646D74; --line:#D5D9D3;
+  --accent:#C8312B; --accent-ink:#FFFFFF; --good:#2F8A4C; --warn:#B7791F;
+  --display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --body:"Barlow",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#14181B; --surface:#1D2226; --sunk:#181C1F; --ink:#E8EBE9; --muted:#9AA3A9; --line:#2F363B;
+    --accent:#E2524A; --good:#4CB06C; --warn:#E0A440;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#14181B; --surface:#1D2226; --sunk:#181C1F; --ink:#E8EBE9; --muted:#9AA3A9; --line:#2F363B;
+  --accent:#E2524A; --good:#4CB06C; --warn:#E0A440;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.5 var(--body);-webkit-font-smoothing:antialiased}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:640px;margin:0 auto;padding:20px 16px 110px}
+h1,h2,h3{font-family:var(--display);margin:0;line-height:1.05}
+.brand{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:18px}
+.brand b{font-family:var(--display);font-size:22px;font-weight:800;letter-spacing:.01em}
+.brand small{color:var(--muted);font-size:13px}
+.hero{margin:6px 0 18px}
+.hero h1{font-size:clamp(46px,14vw,76px);font-weight:800;letter-spacing:-.01em}
+.hero p{margin:4px 0 0;color:var(--muted)}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.chip{border:1.5px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 14px;font-weight:600;font-size:15px;display:inline-flex;align-items:center;gap:8px}
+.chip[aria-pressed="true"]{border-color:var(--ink);background:var(--ink);color:var(--bg)}
+.plate{width:12px;height:12px;border-radius:50%;flex:none;box-shadow:inset 0 0 0 3px rgba(0,0,0,.18)}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:12px 0}
+.seg button{border:1.5px solid var(--line);background:var(--surface);border-radius:10px;padding:10px 6px;text-align:left}
+.seg button b{display:block;font-family:var(--display);font-size:20px;font-weight:700}
+.seg button span{font-size:12px;color:var(--muted)}
+.seg button[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.field{display:flex;align-items:center;gap:10px;margin:10px 0}
+.field label{font-weight:600;font-size:14px}
+input[type=date],input[type=text],textarea{background:var(--surface);border:1.5px solid var(--line);border-radius:8px;padding:8px 10px}
+textarea{width:100%;min-height:84px;resize:vertical}
+.ex{background:var(--surface);border-radius:12px;padding:14px 14px 12px;margin:10px 0;border-left:5px solid var(--line)}
+.ex.ready{border-left-color:var(--good)}
+.ex-head{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.ex-head h3{font-size:22px;font-weight:700}
+.target{font-family:var(--display);font-weight:600;font-size:18px;color:var(--muted);white-space:nowrap}
+.last{font-size:13px;color:var(--muted);margin:2px 0 10px}
+.last strong{color:var(--good);font-weight:600}
+.sets{display:grid;grid-template-columns:28px 1fr 1fr;gap:6px 8px;align-items:center}
+.sets .h{font-size:12px;color:var(--muted)}
+.sets .n{font-family:var(--display);font-weight:700;color:var(--muted);font-size:17px}
+.sets input{width:100%;min-width:0;background:var(--sunk);border:1.5px solid var(--line);border-radius:8px;padding:9px 10px;font-size:17px;font-weight:600;text-align:center}
+.sets input:focus{border-color:var(--accent);outline:none}
+.mini{border:none;background:none;color:var(--muted);font-size:13px;padding:6px 0;text-decoration:underline;text-underline-offset:3px}
+.btn{border:none;border-radius:10px;padding:13px 18px;font-weight:600;font-size:16px;background:var(--ink);color:var(--bg)}
+.btn.accent{background:var(--accent);color:var(--accent-ink)}
+.btn.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
+.btn[disabled]{opacity:.5;cursor:default}
+.btn.block{width:100%}
+.note{background:var(--surface);border-radius:12px;padding:14px;margin:12px 0}
+.note.warn{border-left:5px solid var(--warn)}
+section+section{margin-top:26px}
+.sec-title{font-size:30px;font-weight:800;margin:0 0 4px}
+.board{display:grid;gap:8px;margin:12px 0}
+.mate{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;background:var(--surface);border-radius:12px;padding:12px 14px}
+.mate b{font-size:17px}
+.dots{display:flex;gap:5px}
+.dot{width:16px;height:16px;border-radius:50%;border:2px solid var(--line)}
+.dot.on{border-color:transparent}
+.prog-ex{background:var(--surface);border-radius:12px;padding:12px 14px;margin:8px 0;display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:center}
+.prog-ex .name{font-weight:600}
+.prog-ex .val{font-family:var(--display);font-weight:700;font-size:20px;text-align:right}
+.prog-ex .sub{font-size:13px;color:var(--muted)}
+.up{color:var(--good)} .down{color:var(--accent)}
+.tag{display:inline-block;font-size:12px;font-weight:600;color:var(--good);border:1.5px solid var(--good);border-radius:6px;padding:1px 6px;margin-left:6px}
+svg.spark{display:block;width:100%;height:34px;grid-column:1/-1}
+.day{background:var(--surface);border-radius:12px;padding:14px;margin:10px 0}
+.day h3{font-size:24px;font-weight:700}
+.day ol{margin:8px 0 0;padding:0;list-style:none}
+.day li{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-top:1px solid var(--line)}
+.day li:first-child{border-top:none}
+.day li em{display:block;font-style:normal;font-size:13px;color:var(--muted)}
+.day li span:last-child{font-family:var(--display);font-weight:600;font-size:17px;white-space:nowrap}
+.change{margin:6px 0;padding-left:14px;border-left:3px solid var(--accent)}
+.hist{font-size:14px;padding:8px 0;border-top:1px solid var(--line)}
+.crew-row{display:flex;align-items:center;gap:10px;background:var(--surface);border-radius:10px;padding:10px 12px;margin:6px 0}
+.crew-row span{flex:1;font-weight:600}
+.x{border:none;background:none;color:var(--muted);font-size:14px;text-decoration:underline}
+nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px);z-index:5}
+nav.tabs div{max-width:640px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr)}
+nav.tabs button{border:none;background:none;padding:12px 4px 13px;font-family:var(--display);font-weight:700;font-size:17px;color:var(--muted);border-top:3px solid transparent}
+nav.tabs button[aria-current="page"]{color:var(--ink);border-top-color:var(--accent)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(76px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;font-size:14px;z-index:6;max-width:90vw}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:spin .8s linear infinite;vertical-align:-2px;margin-right:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spinner{animation:none}}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<nav class="tabs" aria-label="Sections"><div id="tabs"></div></nav>
+<div id="toast" role="status" aria-live="polite"></div>
+<script>
+(function(){
+const PLATES=['#C8312B','#2457A8','#D9A21B','#2F8A4C','#7A4FB5','#E07B2E'];
+const WEEKDAYS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const TABS=[['log','Log'],['progress','Progress'],['programme','Programme'],['crew','Crew']];
+const S={ai:false,offline:false,logsLoaded:false,boot:'loading',canWrite:null,program:undefined,crew:undefined,logs:[],
+  tab:'log',person:null,dayId:null,date:today(),draft:{},draftKey:'',progPerson:null,
+  proposal:null,adapting:false,adaptNote:'',adaptErr:'',saving:false,newName:''};
+
+function today(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function slug(s){return String(s).toLowerCase().replace(/[^a-z0-9_.-]+/g,'-').replace(/^-+|-+$/g,'').slice(0,150)||'x';}
+function num(v){const n=parseFloat(String(v).replace(',','.'));return isFinite(n)?n:0;}
+function fmtKg(n){return (Math.round(n*100)/100).toString();}
+function ls(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v);}catch(e){return null;}}
+function crewNames(){return (S.crew&&Array.isArray(S.crew.names))?S.crew.names:[];}
+function colourFor(name){const i=crewNames().indexOf(name);return PLATES[(i<0?0:i)%PLATES.length];}
+function days(){return (S.program&&Array.isArray(S.program.days))?S.program.days:[];}
+function dayById(id){return days().find(d=>d.id===id);}
+function e1rm(s){return s.kg>0?s.kg*(1+s.reps/30):s.reps;}
+function topSet(sets){let b=null;for(const s of sets||[]){if(!b||e1rm(s)>e1rm(b))b=s;}return b;}
+function setStr(s){return s.kg>0?fmtKg(s.kg)+' kg × '+s.reps:s.reps+' reps';}
+function mondayOf(ds){const d=new Date(ds+'T00:00:00');const w=(d.getDay()+6)%7;d.setDate(d.getDate()-w);return d;}
+function toast(msg){const t=document.getElementById('toast');t.innerHTML='<div class="toast">'+esc(msg)+'</div>';clearTimeout(toast._t);toast._t=setTimeout(()=>{t.innerHTML='';},2600);}
+/* ---------- server API (Vercel functions + Upstash Redis) ---------- */
+const CODE_KEY='crew-lifts-code',PENDING_KEY='crew-lifts-pending';
+function code(){return ls(CODE_KEY)||'';}
+async function api(path,body){
+  const r=await fetch('/api/'+path,{method:body?'POST':'GET',headers:Object.assign({'x-crew-code':code()},body?{'content-type':'application/json'}:{}),body:body?JSON.stringify(body):undefined,cache:'no-store'});
+  if(r.status===401){const e=new Error('locked');e.code='locked';throw e;}
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok){const e=new Error(j.error||'Request failed');e.code=j.code||'server';throw e;}
+  return j;
+}
+function pending(v){if(v===undefined){try{return JSON.parse(ls(PENDING_KEY)||'[]');}catch(e){return [];}}ls(PENDING_KEY,JSON.stringify(v));}
+function queue(op){const q=pending().filter(x=>!(x.action==='saveLog'&&op.action==='saveLog'&&x.log.id===op.log.id));q.push(op);pending(q);}
+async function flush(){
+  let q=pending();if(!q.length)return;
+  const left=[];
+  for(const op of q){try{await api('data',op);}catch(e){if(e.code==='locked'){left.push(...q.slice(q.indexOf(op)));break;}left.push(op);}}
+  pending(left);
+  if(!left.length&&q.length)toast('Offline sessions synced.');
+}
+function mergePending(logs){
+  const q=pending();const byId=new Map(logs.map(l=>[l.id,l]));
+  for(const op of q){if(op.action==='saveLog')byId.set(op.log.id,Object.assign({},op.log,{_pending:true}));else if(op.action==='deleteLog')byId.delete(op.id);}
+  return [...byId.values()].sort((a,b)=>a.date<b.date?1:-1);
+}
+async function refresh(){
+  try{
+    await flush();
+    const d=await api('data');
+    S.program=d.program||null;S.crew=d.crew||{names:[]};S.logs=mergePending(d.logs||[]);S.ai=!!d.ai;
+    if(S.person&&!crewNames().includes(S.person))S.person=null;
+    S.boot='ready';S.logsLoaded=true;S.offline=false;
+  }catch(e){
+    if(e.code==='locked'){S.boot='locked';}
+    else{S.offline=true;if(S.boot==='loading'){const c=cacheGet();if(c){S.program=c.program;S.crew=c.crew;S.logs=mergePending(c.logs||[]);S.boot='ready';S.logsLoaded=true;}else S.boot='error';}}
+  }
+  if(S.boot==='ready'&&!S.offline)cacheSet();
+  render();
+}
+function cacheSet(){ls('crew-lifts-cache',JSON.stringify({program:S.program,crew:S.crew,logs:S.logs.filter(l=>!l._pending)}));}
+function cacheGet(){try{return JSON.parse(ls('crew-lifts-cache')||'null');}catch(e){return null;}}
+function download(name,text,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500);}
+function exportCsv(){
+  const rows=[['date','person','session','exercise','set','kg','reps']];
+  for(const l of S.logs.slice().sort((a,b)=>a.date<b.date?-1:1))for(const e of l.entries||[])(e.sets||[]).forEach((st,i)=>rows.push([l.date,l.person,l.dayName,e.name,i+1,st.kg,st.reps]));
+  download('crew-lifts-'+today()+'.csv',rows.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n'),'text/csv');
+}
+
+/* ---------- data helpers ---------- */
+function personLogs(p){return S.logs.filter(l=>l.person===p);}
+function lastLogFor(p,dayId,beforeDate){
+  return S.logs.filter(l=>l.person===p&&l.dayId===dayId&&l.date<beforeDate).sort((a,b)=>a.date<b.date?1:-1)[0];
+}
+function lastEntryFor(p,exId,beforeDate){
+  const l=S.logs.filter(l=>l.person===p&&l.date<beforeDate&&(l.entries||[]).some(e=>e.exId===exId)).sort((a,b)=>a.date<b.date?1:-1)[0];
+  return l?{date:l.date,entry:l.entries.find(e=>e.exId===exId)}:null;
+}
+function existingLog(){
+  if(!S.person||!S.dayId)return null;
+  return S.logs.find(l=>l.id===slug(S.date+'_'+S.person+'_'+S.dayId));
+}
+function isReady(entry,ex){
+  if(!entry||!ex)return false;
+  const sets=entry.sets||[];
+  return sets.length>=ex.sets&&sets.every(s=>s.reps>=ex.repMax);
+}
+function buildDraft(){
+  const key=[S.person,S.dayId,S.date,S.program&&S.program.version,S.logsLoaded].join('|');
+  if(key===S.draftKey)return;
+  S.draftKey=key;S.draft={};
+  try{const sv=JSON.parse(ls('crew-lifts-draft')||'null');if(sv&&sv.key===key&&sv.draft){S.draft=sv.draft;return;}}catch(e){}
+  const day=dayById(S.dayId);if(!day||!S.person)return;
+  const ex0=existingLog();
+  for(const ex of day.exercises||[]){
+    const n=Math.max(1,ex.sets|0);
+    const saved=ex0&&(ex0.entries||[]).find(e=>e.exId===ex.id);
+    if(saved){S.draft[ex.id]=saved.sets.map(s=>({kg:s.kg?String(s.kg):'',reps:String(s.reps)}));continue;}
+    const last=lastEntryFor(S.person,ex.id,S.date);
+    const ls_=last?last.entry.sets:[];
+    S.draft[ex.id]=Array.from({length:n},(_,i)=>{const p=ls_[i]||ls_[ls_.length-1];return{kg:p&&p.kg?String(p.kg):'',reps:''};});
+  }
+}
+
+/* ---------- rendering ---------- */
+function render(){
+  const app=document.getElementById('app');
+  const a=document.activeElement;const fid=a&&a.id;let sel=null;
+  try{sel=fid&&a.selectionStart!=null?[a.selectionStart,a.selectionEnd]:null;}catch(e){}
+  let html='<div class="brand"><b>Crew Lifts</b><small>'+esc(S.program&&S.program.version?'Programme v'+S.program.version:'')+'</small></div>';
+  if(S.boot==='loading'){html+='<p class="muted"><span class="spinner"></span>Loading the crew’s data</p>';}
+  else if(S.boot==='locked'){html+='<div class="hero"><h1>Crew only</h1><p>Enter the crew code to see and log sessions.</p></div><div class="row"><input type="password" id="code" autocomplete="current-password" placeholder="Crew code" style="flex:1"><button class="btn accent" data-act="unlock">Unlock</button></div>';}
+  else if(S.boot==='error'){html+='<div class="note warn"><b>Could not reach the server.</b><p class="muted small">Check your connection, then reload.</p></div>';}
+  else{
+    if(S.offline)html+='<div class="note warn small">Offline. Sessions you save are kept on this phone and sync when you reconnect.</div>';
+    else if(pending().length)html+='<div class="note warn small">'+pending().length+' change(s) waiting to sync.</div>';
+    html+=({log:viewLog,progress:viewProgress,programme:viewProgramme,crew:viewCrew}[S.tab])();
+  }
+  app.innerHTML=html;
+  document.getElementById('tabs').innerHTML=TABS.map(([k,l])=>'<button data-act="tab" data-v="'+k+'"'+(S.tab===k?' aria-current="page"':'')+'>'+l+'</button>').join('');
+  if(fid){const el=document.getElementById(fid);if(el){el.focus({preventScroll:true});if(sel)try{el.setSelectionRange(sel[0],sel[1]);}catch(e){}}}
+}
+
+function personChips(act,current){
+  const names=crewNames();
+  if(!names.length)return '<p class="muted small">No one in the crew yet. Add names on the Crew tab.</p>';
+  return '<div class="row" role="group" aria-label="Who is training">'+names.map(n=>'<button class="chip" data-act="'+act+'" data-v="'+esc(n)+'" aria-pressed="'+(current===n)+'"><span class="plate" style="background:'+colourFor(n)+'"></span>'+esc(n)+'</button>').join('')+'</div>';
+}
+
+function viewLog(){
+  if(S.program===null)return emptyProgramme();
+  if(S.program===undefined)return '<p class="muted"><span class="spinner"></span>Loading programme</p>';
+  if(!S.dayId||!dayById(S.dayId)){
+    const wd=WEEKDAYS[new Date().getDay()];
+    S.dayId=(days().find(d=>d.weekday===wd)||days()[0]||{}).id||null;
+  }
+  const day=dayById(S.dayId);
+  buildDraft();
+  let h='<div class="hero"><h1>'+esc(day?day.name+' day':'Log')+'</h1><p>'+esc(day?day.focus:'')+'</p></div>';
+  h+=personChips('person',S.person);
+  h+='<div class="seg" role="group" aria-label="Session">'+days().map(d=>'<button data-act="day" data-v="'+esc(d.id)+'" aria-pressed="'+(d.id===S.dayId)+'"><b>'+esc(d.name)+'</b><span>'+esc(d.weekday||'')+'</span></button>').join('')+'</div>';
+  h+='<div class="field"><label for="date">Date</label><input type="date" id="date" value="'+esc(S.date)+'" max="'+today()+'"></div>';
+  if(!S.person)return h+'<div class="note">Pick who is training to load their last numbers.</div>';
+  if(!day)return h;
+  const ex0=existingLog();
+  if(ex0)h+='<div class="note small">'+esc(S.person)+' already logged this session on this date. Saving will update it.</div>';
+  for(const ex of day.exercises||[]){
+    const last=lastEntryFor(S.person,ex.id,S.date);
+    const ready=last&&isReady(last.entry,ex);
+    const rows=S.draft[ex.id]||[];
+    h+='<div class="ex'+(ready?' ready':'')+'"><div class="ex-head"><h3>'+esc(ex.name)+'</h3><span class="target">'+ex.sets+' × '+ex.repMin+'–'+ex.repMax+'</span></div>';
+    h+='<p class="last">'+(last?'Last ('+esc(last.date.slice(5).split('-').reverse().join('/'))+'): '+last.entry.sets.map(setStr).join(', ')+(ready?' · <strong>hit the top of the range, add weight</strong>':''):'No history yet')+(ex.note?'<br>'+esc(ex.note):'')+'</p>';
+    h+='<div class="sets"><span></span><span class="h">kg</span><span class="h">reps</span>';
+    rows.forEach((r,i)=>{
+      h+='<span class="n">'+(i+1)+'</span><input id="kg-'+esc(ex.id)+'-'+i+'" inputmode="decimal" aria-label="'+esc(ex.name)+' set '+(i+1)+' kg" data-ex="'+esc(ex.id)+'" data-i="'+i+'" data-f="kg" value="'+esc(r.kg)+'" placeholder="0">';
+      h+='<input id="reps-'+esc(ex.id)+'-'+i+'" inputmode="numeric" aria-label="'+esc(ex.name)+' set '+(i+1)+' reps" data-ex="'+esc(ex.id)+'" data-i="'+i+'" data-f="reps" value="'+esc(r.reps)+'" placeholder="'+ex.repMin+'–'+ex.repMax+'">';
+    });
+    h+='</div><div class="row"><button class="mini" data-act="addset" data-v="'+esc(ex.id)+'">Add set</button>'+(rows.length>1?'<button class="mini" data-act="dropset" data-v="'+esc(ex.id)+'">Remove last set</button>':'')+'</div></div>';
+  }
+  h+='<button class="btn accent block" data-act="save"'+(S.saving||S.canWrite===false?' disabled':'')+'>'+(S.saving?'<span class="spinner"></span>Saving':ex0?'Update session':'Save session')+'</button>';
+  if(ex0&&S.canWrite!==false)h+='<p style="text-align:center"><button class="mini" data-act="delsession">Delete this session</button></p>';
+  return h;
+}
+
+function spark(vals){
+  if(vals.length<2)return '';
+  const w=300,h=34,p=3,mn=Math.min(...vals),mx=Math.max(...vals),r=(mx-mn)||1;
+  const pts=vals.map((v,i)=>[p+i*(w-2*p)/(vals.length-1),h-p-(v-mn)/r*(h-2*p)]);
+  return '<svg class="spark" viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none" aria-hidden="true"><polyline fill="none" stroke="var(--accent)" stroke-width="2" vector-effect="non-scaling-stroke" points="'+pts.map(q=>q.map(n=>n.toFixed(1)).join(',')).join(' ')+'"/></svg>';
+}
+
+function viewProgress(){
+  const names=crewNames();
+  let h='<div class="hero"><h1>Progress</h1><p>Sessions this week and every lift over time.</p></div>';
+  const wk=mondayOf(today());
+  h+='<div class="board">'+(names.length?names.map(n=>{
+    const pl=personLogs(n);
+    const thisWeek=new Set(pl.filter(l=>new Date(l.date+'T00:00:00')>=wk).map(l=>l.date+l.dayId)).size;
+    const target=Math.max(days().length,1);
+    let dots='';for(let i=0;i<target;i++)dots+='<span class="dot'+(i<thisWeek?' on':'')+'" style="'+(i<thisWeek?'background:'+colourFor(n):'')+'"></span>';
+    return '<div class="mate"><span class="plate" style="background:'+colourFor(n)+';width:22px;height:22px"></span><div><b>'+esc(n)+'</b><div class="small muted">'+pl.length+' sessions logged</div></div><div class="dots" aria-label="'+thisWeek+' of '+target+' sessions this week">'+dots+'</div></div>';
+  }).join(''):'<p class="muted small">Add the crew on the Crew tab.</p>')+'</div>';
+  if(!names.length||!days().length)return h;
+  if(!S.progPerson||!names.includes(S.progPerson))S.progPerson=S.person&&names.includes(S.person)?S.person:names[0];
+  h+='<section><h2 class="sec-title">Lifts</h2>'+personChips('progperson',S.progPerson);
+  const pl=personLogs(S.progPerson).slice().sort((a,b)=>a.date<b.date?-1:1);
+  for(const d of days()){
+    h+='<h3 style="font-size:22px;margin:18px 0 4px">'+esc(d.name)+'</h3>';
+    for(const ex of d.exercises||[]){
+      const hist=pl.map(l=>({date:l.date,e:(l.entries||[]).find(e=>e.exId===ex.id)})).filter(x=>x.e&&x.e.sets&&x.e.sets.length);
+      if(!hist.length){h+='<div class="prog-ex"><span class="name">'+esc(ex.name)+'</span><span class="sub">Not logged yet</span></div>';continue;}
+      const tops=hist.map(x=>topSet(x.e.sets));const vals=tops.map(e1rm);
+      const last=tops[tops.length-1];const first=vals[0],lv=vals[vals.length-1];
+      const pct=first?Math.round((lv-first)/first*100):0;
+      const ready=isReady(hist[hist.length-1].e,ex);
+      h+='<div class="prog-ex"><span class="name">'+esc(ex.name)+(ready?'<span class="tag">Add weight</span>':'')+'</span><span class="val">'+setStr(last)+'</span>';
+      h+='<span class="sub">'+hist.length+' session'+(hist.length>1?'s':'')+(last.kg>0?' · est. 1RM '+fmtKg(Math.round(lv*2)/2)+' kg':'')+'</span><span class="sub '+(pct>0?'up':pct<0?'down':'')+'" style="text-align:right">'+(hist.length>1?(pct>0?'+':'')+pct+'% since start':'')+'</span>'+spark(vals)+'</div>';
+    }
+  }
+  return h+'</section>';
+}
+
+function emptyProgramme(){
+  return '<div class="hero"><h1>No programme yet</h1><p>The training plan has not been loaded into this tracker.</p></div>';
+}
+
+function dayList(ds){
+  return ds.map(d=>'<div class="day"><h3>'+esc(d.name)+' <span class="muted" style="font-size:16px;font-weight:600">'+esc(d.weekday||'')+'</span></h3><p class="small muted" style="margin:2px 0 0">'+esc(d.focus||'')+'</p><ol>'+(d.exercises||[]).map(ex=>'<li><span>'+esc(ex.name)+(ex.note?'<em>'+esc(ex.note)+'</em>':'')+'</span><span>'+ex.sets+' × '+ex.repMin+'–'+ex.repMax+'</span></li>').join('')+'</ol></div>').join('');
+}
+
+function viewProgramme(){
+  if(S.program===null)return emptyProgramme();
+  if(!S.program)return '<p class="muted"><span class="spinner"></span>Loading programme</p>';
+  let h='<div class="hero"><h1>Programme</h1><p>Version '+esc(S.program.version)+(S.program.updatedAt?', updated '+esc(new Date(S.program.updatedAt).toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'})):'')+'</p></div>';
+  if(S.proposal){
+    const p=S.proposal;
+    h+='<section><h2 class="sec-title">Proposed version '+((S.program.version|0)+1)+'</h2><div class="note"><p style="margin-top:0">'+esc(p.summary)+'</p>'+(p.changes||[]).map(c=>'<div class="change">'+esc(c)+'</div>').join('')+'</div>'+dayList(p.days)+'<div class="row"><button class="btn accent" data-act="apply"'+(S.canWrite===false?' disabled':'')+'>Apply version '+((S.program.version|0)+1)+'</button><button class="btn ghost" data-act="discard">Discard</button></div></section>';
+  }else{
+    h+=dayList(days());
+    if(S.ai){
+      h+='<section><h2 class="sec-title">Adapt the programme</h2><p class="muted small">Claude reviews everyone’s logged numbers plus anything you add below, then proposes a new version. Nothing changes until someone applies it.</p>';
+      h+='<textarea id="adapt" placeholder="For example: we have stalled on bench, two of us want more glute work, Sam has a sore shoulder">'+esc(S.adaptNote)+'</textarea>';
+      if(S.adaptErr)h+='<p class="small down">'+esc(S.adaptErr)+'</p>';
+      h+='<button class="btn block" style="margin-top:10px" data-act="adapt"'+(S.adapting?' disabled':'')+'>'+(S.adapting?'<span class="spinner"></span>Reviewing the crew’s numbers':'Suggest changes')+'</button></section>';
+    }
+  }
+  const hist=(S.program.history||[]).slice().reverse();
+  if(hist.length)h+='<section><h2 class="sec-title">History</h2>'+hist.map(x=>'<div class="hist"><b>v'+esc(x.version)+'</b> <span class="muted">'+esc(x.date||'')+'</span><br>'+esc(x.summary||'')+'</div>').join('')+'</section>';
+  return h;
+}
+
+function viewCrew(){
+  const names=crewNames();
+  let h='<div class="hero"><h1>The crew</h1><p>Everyone gets a plate colour. Anyone can log for anyone.</p></div>';
+  h+=names.map((n,i)=>'<div class="crew-row"><span class="plate" style="background:'+colourFor(n)+';width:18px;height:18px"></span><span>'+esc(n)+'</span>'+(S.canWrite===false?'':'<button class="x" data-act="rmname" data-v="'+esc(n)+'">Remove</button>')+'</div>').join('');
+  if(S.canWrite!==false&&names.length<PLATES.length){
+    h+='<div class="row" style="margin-top:10px"><input type="text" id="newname" placeholder="Name" maxlength="24" value="'+esc(S.newName)+'" style="flex:1"><button class="btn" data-act="addname">Add</button></div>';
+  }
+  h+='<div class="note small"><b>Sharing</b><p class="muted" style="margin:4px 0 0">Send the crew the site link and the crew code. Anyone with both can log for anyone.</p></div>';
+  h+='<section><h2 class="sec-title">Backup</h2><p class="muted small">Download every logged set. Worth doing once a month.</p><div class="row"><button class="btn ghost" data-act="csv">Download CSV</button><button class="btn ghost" data-act="json">Download full backup</button></div></section>';
+  h+='<p style="margin-top:24px"><button class="mini" data-act="lock">Sign out of this phone</button></p>';
+  return h;
+}
+
+/* ---------- actions ---------- */
+async function saveSession(){
+  const day=dayById(S.dayId);if(!day||!S.person)return;
+  const entries=(day.exercises||[]).map(ex=>({exId:ex.id,name:ex.name,sets:(S.draft[ex.id]||[]).map(s=>({kg:num(s.kg),reps:Math.round(num(s.reps))})).filter(s=>s.reps>0)})).filter(e=>e.sets.length);
+  if(!entries.length){toast('Enter reps for at least one set first.');return;}
+  S.saving=true;render();
+  try{
+  const log={id:slug(S.date+'_'+S.person+'_'+day.id),person:S.person,date:S.date,dayId:day.id,dayName:day.name,programVersion:S.program.version||1,entries,savedAt:new Date().toISOString()};
+  S.logs=mergePending(S.logs.filter(l=>l.id!==log.id).concat(log));
+  try{await api('data',{action:'saveLog',log});toast('Session saved for '+S.person+'.');}
+  catch(e){if(e.code==='locked'){S.boot='locked';}else{queue({action:'saveLog',log});S.logs=mergePending(S.logs);toast('Saved on this phone. It will sync when you are back online.');}}
+  S.draftKey='';ls('crew-lifts-draft','');
+  }catch(e){toast('Could not save. Try again.');}
+  S.saving=false;render();
+}
+function handleWriteErr(e){
+  if(e&&e.code==='locked'){S.boot='locked';render();}
+  else if(e&&e.code==='conflict'){toast(e.message);refresh();}
+  else toast('Could not save. Check your connection and try again.');
+}
+async function deleteSession(){
+  const l=existingLog();if(!l||!confirm('Delete '+l.person+'’s '+l.dayName+' session on '+l.date+'?'))return;
+  S.logs=S.logs.filter(x=>x.id!==l.id);S.draftKey='';render();
+  try{await api('data',{action:'deleteLog',id:l.id});toast('Session deleted.');}catch(e){if(e.code==='locked')handleWriteErr(e);else{queue({action:'deleteLog',id:l.id});toast('Deleted on this phone. It will sync when you are back online.');}}
+}
+async function saveCrew(names){
+  try{await api('data',{action:'saveCrew',names});S.crew={names};render();}catch(e){handleWriteErr(e);}
+}
+
+function trainingSummary(){
+  const out={};
+  for(const n of crewNames()){
+    const pl=personLogs(n).slice().sort((a,b)=>a.date<b.date?1:-1);
+    const per={};
+    for(const l of pl)for(const e of l.entries||[]){(per[e.exId]=per[e.exId]||[]);if(per[e.exId].length<4)per[e.exId].push(l.date+': '+e.sets.map(s=>(s.kg?fmtKg(s.kg)+'kg×':'BW×')+s.reps).join(', '));}
+    const wk=new Date();wk.setDate(wk.getDate()-28);
+    out[n]={sessionsLast4Weeks:pl.filter(l=>new Date(l.date)>=wk).length,recentByExerciseId:per};
+  }
+  return out;
+}
+function validProposal(p){
+  if(!p||typeof p!=='object'||!Array.isArray(p.days)||!p.days.length)return null;
+  const ids=new Set();
+  const ds=p.days.map((d,i)=>({id:slug(d.id||d.name||'day'+i),name:String(d.name||'Day '+(i+1)).slice(0,40),weekday:WEEKDAYS.includes(d.weekday)?d.weekday:'',focus:String(d.focus||'').slice(0,120),
+    exercises:(Array.isArray(d.exercises)?d.exercises:[]).map((ex,j)=>{let id=slug(ex.id||ex.name||('ex'+j));while(ids.has(id))id+='-2';ids.add(id);
+      const sets=Math.min(6,Math.max(1,Math.round(num(ex.sets))||3));let mn=Math.max(1,Math.round(num(ex.repMin))||8),mx=Math.max(mn,Math.round(num(ex.repMax))||mn);
+      const o={id,name:String(ex.name||'Exercise').slice(0,60),sets,repMin:mn,repMax:mx};if(ex.note)o.note=String(ex.note).slice(0,160);return o;}).filter(ex=>ex.name)}));
+  if(ds.some(d=>!d.exercises.length))return null;
+  return{summary:String(p.summary||'Updated programme.').slice(0,400),changes:(Array.isArray(p.changes)?p.changes:[]).map(c=>String(c).slice(0,240)).slice(0,12),days:ds};
+}
+async function adapt(){
+  if(!S.ai||S.adapting)return;
+  S.adapting=true;S.adaptErr='';render();
+  const prog={days:days()};
+  const prompt='You are an experienced strength coach updating a shared training programme for a group of '+crewNames().length+' friends who train together and follow the same plan. Use Australian English and kilograms.\n\n'+
+  'CURRENT PROGRAMME (JSON):\n'+JSON.stringify(prog)+'\n\n'+
+  'RECENT TRAINING (per person; exercise id -> latest sessions, kg×reps, BW = bodyweight):\n'+JSON.stringify(trainingSummary())+'\n\n'+
+  'WHAT THE GROUP SAYS HAS CHANGED:\n'+(S.adaptNote.trim()||'(nothing added; base changes on the training data only)')+'\n\n'+
+  'RULES:\n- Make small, evidence-based changes; keep what is working. If the data shows steady progress and nobody asked for changes, keep the programme almost identical and say so.\n- Keep the same days and day ids unless the group asks otherwise.\n- Keep the existing id for any exercise you keep or adjust. New exercises get a new lowercase hyphenated id.\n- 4 to 7 exercises per day, 2 to 5 sets, repMin lower than repMax.\n- Use short "note" fields only where they help (technique cue, swap reason).\n- If anyone mentions pain or injury, swap to a pain-free alternative for that movement and add a note recommending they get it checked by a physio. Do not diagnose.\n- One plan for the whole group; individual loads are handled by each person.\n\n'+
+  'Return ONLY a JSON object, no other text: {"summary":"one or two sentences","changes":["each concrete change and why"],"days":[{"id":"","name":"","weekday":"Monday","focus":"","exercises":[{"id":"","name":"","sets":3,"repMin":8,"repMax":12,"note":""}]}]}';
+  try{
+    const res=(await api('adapt',{prompt})).result;
+    const p=validProposal(res);
+    if(!p)S.adaptErr='Claude’s suggestion came back incomplete. Try again.';
+    else S.proposal=p;
+  }catch(e){
+    if(e&&e.code==='locked'){S.boot='locked';}
+    else if(e&&e.code==='rate_limited')S.adaptErr='Too many requests right now. Try again in a few minutes.';
+    else S.adaptErr='Could not get a suggestion. Try again.';
+  }
+  S.adapting=false;render();
+}
+async function applyProposal(){
+  const p=S.proposal;if(!p)return;
+  const v=(S.program.version|0)+1;
+  const hist=(S.program.history||[]).slice(-19);
+  hist.push({version:v,date:today(),summary:p.summary,changes:p.changes});
+  try{
+    const program={version:v,updatedAt:new Date().toISOString(),days:p.days,history:hist};
+    await api('data',{action:'saveProgram',program,baseVersion:S.program.version|0});S.program=program;
+    S.proposal=null;S.adaptNote='';S.draftKey='';toast('Version '+v+' is live for the crew.');
+  }catch(e){handleWriteErr(e);}
+  render();
+}
+
+/* ---------- events ---------- */
+document.addEventListener('click',ev=>{
+  const b=ev.target.closest('[data-act]');if(!b)return;
+  const v=b.dataset.v,act=b.dataset.act;
+  if(act==='tab'){S.tab=v;render();window.scrollTo(0,0);}
+  else if(act==='person'){S.person=v;ls('crew-lifts-person',v);render();}
+  else if(act==='day'){S.dayId=v;render();}
+  else if(act==='addset'){const r=S.draft[v]||(S.draft[v]=[]);const p=r[r.length-1];r.push({kg:p?p.kg:'',reps:''});render();}
+  else if(act==='dropset'){const r=S.draft[v];if(r&&r.length>1)r.pop();render();}
+  else if(act==='save')saveSession();
+  else if(act==='delsession')deleteSession();
+  else if(act==='progperson'){S.progPerson=v;render();}
+  else if(act==='adapt')adapt();
+  else if(act==='discard'){S.proposal=null;render();}
+  else if(act==='apply')applyProposal();
+  else if(act==='addname'){const n=S.newName.trim().replace(/\s+/g,' ');if(!n)return;if(crewNames().includes(n)){toast(n+' is already in the crew.');return;}S.newName='';saveCrew(crewNames().concat(n));}
+  else if(act==='unlock'){const c=(document.getElementById('code')||{}).value||'';ls(CODE_KEY,c.trim());S.boot='loading';render();refresh();}
+  else if(act==='lock'){ls(CODE_KEY,'');S.boot='locked';render();}
+  else if(act==='csv')exportCsv();
+  else if(act==='json')download('crew-lifts-backup-'+today()+'.json',JSON.stringify({exportedAt:new Date().toISOString(),program:S.program,crew:S.crew,logs:S.logs},null,2),'application/json');
+  else if(act==='rmname'){if(confirm('Remove '+v+' from the crew? Their logged sessions stay.'))saveCrew(crewNames().filter(x=>x!==v));}
+});
+document.addEventListener('input',ev=>{
+  const t=ev.target;
+  if(t.dataset&&t.dataset.ex){const r=S.draft[t.dataset.ex];if(r&&r[+t.dataset.i])r[+t.dataset.i][t.dataset.f]=t.value;ls('crew-lifts-draft',JSON.stringify({key:S.draftKey,draft:S.draft}));}
+  else if(t.id==='adapt')S.adaptNote=t.value;
+  else if(t.id==='newname')S.newName=t.value;
+});
+document.addEventListener('change',ev=>{if(ev.target.id==='date'&&ev.target.value){S.date=ev.target.value;render();}});
+document.addEventListener('keydown',ev=>{if(ev.key==='Enter'&&ev.target.id==='code'){ev.preventDefault();document.querySelector('[data-act="unlock"]').click();}
+  if(ev.key==='Enter'&&ev.target.id==='newname'){ev.preventDefault();document.querySelector('[data-act="addname"]').click();}});
+
+/* ---------- boot ---------- */
+S.person=ls('crew-lifts-person');
+render();
+refresh();
+setInterval(()=>{if(document.visibilityState==='visible'&&S.boot==='ready'&&!S.adapting&&!S.saving)refresh();},30000);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&S.boot==='ready')refresh();});
+window.addEventListener('online',()=>{if(S.boot!=='locked')refresh();});
+})();
+</script>
+</body>
+</html>
