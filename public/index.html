@@ -84,6 +84,12 @@ section+section{margin-top:26px}
 .dots{display:flex;gap:5px}
 .dot{width:16px;height:16px;border-radius:50%;border:2px solid var(--line)}
 .dot.on{border-color:transparent}
+.day7{width:22px;height:26px;border-radius:5px;border:1.5px solid var(--line);font:600 11px/23px var(--body);text-align:center;color:var(--muted)}
+.day7.on{border-color:transparent;color:#fff}
+.day7.now{border-color:var(--ink)}
+.sess{display:flex;justify-content:space-between;gap:10px;width:100%;text-align:left;background:var(--surface);border:none;border-radius:10px;padding:11px 14px;margin:6px 0}
+.sess b{font-weight:600}.sess span{color:var(--muted);font-size:14px}
+@media (max-width:380px){.day7{width:18px;font-size:10px}}
 .prog-ex{background:var(--surface);border-radius:12px;padding:12px 14px;margin:8px 0;display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:center}
 .prog-ex .name{font-weight:600}
 .prog-ex .val{font-family:var(--display);font-weight:700;font-size:20px;text-align:right}
@@ -100,6 +106,11 @@ svg.spark{display:block;width:100%;height:34px;grid-column:1/-1}
 .day li span:last-child{font-family:var(--display);font-weight:600;font-size:17px;white-space:nowrap}
 .change{margin:6px 0;padding-left:14px;border-left:3px solid var(--accent)}
 .hist{font-size:14px;padding:8px 0;border-top:1px solid var(--line)}
+.addex{border-top:1px solid var(--line);margin-top:8px;padding-top:12px;display:grid;gap:8px}
+.addex input{width:100%;background:var(--sunk);border:1.5px solid var(--line);border-radius:8px;padding:9px 10px}
+.addnums{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.addnums label{font-size:12px;color:var(--muted);display:grid;gap:3px}
+.addnums input{text-align:center;font-weight:600;color:var(--ink)}
 .crew-row{display:flex;align-items:center;gap:10px;background:var(--surface);border-radius:10px;padding:10px 12px;margin:6px 0}
 .crew-row span{flex:1;font-weight:600}
 .x{border:none;background:none;color:var(--muted);font-size:14px;text-decoration:underline}
@@ -148,8 +159,8 @@ const PLATES=['#C8312B','#2457A8','#D9A21B','#2F8A4C','#7A4FB5','#E07B2E'];
 const WEEKDAYS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 const TABS=[['log','Log'],['progress','Progress'],['programme','Programme'],['crew','Crew']];
 const S={ai:false,offline:false,logsLoaded:false,boot:'loading',canWrite:null,program:undefined,crew:undefined,logs:[],
-  tab:'log',person:null,dayId:null,date:today(),draft:{},draftKey:'',progPerson:null,
-  proposal:null,adapting:false,adaptNote:'',adaptErr:'',saving:false,newName:''};
+  tab:'log',person:null,dayId:null,dayAuto:true,date:today(),draft:{},draftKey:'',progPerson:null,
+  proposal:null,adapting:false,editing:false,editDays:null,editChanges:[],addForm:{},adaptNote:'',adaptErr:'',saving:false,newName:''};
 
 function today(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
@@ -164,6 +175,18 @@ function dayById(id){return days().find(d=>d.id===id);}
 function e1rm(s){return s.kg>0?s.kg*(1+s.reps/30):s.reps;}
 function topSet(sets){let b=null;for(const s of sets||[]){if(!b||e1rm(s)>e1rm(b))b=s;}return b;}
 function setStr(s){return s.kg>0?fmtKg(s.kg)+' kg × '+s.reps:s.reps+' reps';}
+function fmtDate(ds,long){const d=new Date(ds+'T00:00:00');return d.toLocaleDateString('en-AU',long?{weekday:'long',day:'numeric',month:'long'}:{weekday:'short',day:'numeric',month:'short'});}
+function suggestDay(p,date){
+  if(!p)return (days()[0]||{}).id||null;
+  const same=S.logs.find(l=>l.person===p&&l.date===date&&dayById(l.dayId));
+  if(same)return same.dayId;
+  const prev=S.logs.filter(l=>l.person===p&&l.date<date&&dayById(l.dayId)).sort((a,b)=>a.date<b.date?1:-1)[0];
+  const ds=days();if(!ds.length)return null;
+  if(!prev)return ds[0].id;
+  const i=ds.findIndex(d=>d.id===prev.dayId);
+  return ds[(i+1)%ds.length].id;
+}
+function lastDone(p,dayId,before){const l=S.logs.filter(l=>l.person===p&&l.dayId===dayId&&l.date<=before).sort((a,b)=>a.date<b.date?1:-1)[0];return l?l.date:null;}
 function mondayOf(ds){const d=new Date(ds+'T00:00:00');const w=(d.getDay()+6)%7;d.setDate(d.getDate()-w);return d;}
 function toast(msg){const t=document.getElementById('toast');t.innerHTML='<div class="toast">'+esc(msg)+'</div>';clearTimeout(toast._t);toast._t=setTimeout(()=>{t.innerHTML='';},2600);}
 /* ---------- server API (Vercel functions + Upstash Redis) ---------- */
@@ -276,15 +299,12 @@ function personChips(act,current){
 function viewLog(){
   if(S.program===null)return emptyProgramme();
   if(S.program===undefined)return '<p class="muted"><span class="spinner"></span>Loading programme</p>';
-  if(!S.dayId||!dayById(S.dayId)){
-    const wd=WEEKDAYS[new Date().getDay()];
-    S.dayId=(days().find(d=>d.weekday===wd)||days()[0]||{}).id||null;
-  }
+  if(S.dayAuto||!S.dayId||!dayById(S.dayId))S.dayId=suggestDay(S.person,S.date);
   const day=dayById(S.dayId);
   buildDraft();
-  let h='<div class="hero"><h1>'+esc(day?day.name+' day':'Log')+'</h1><p>'+esc(day?day.focus:'')+'</p></div>';
+  let h='<div class="hero"><h1>'+esc(day?day.name+' day':'Log')+'</h1><p>'+esc(fmtDate(S.date,true))+(day&&day.focus?'. '+esc(day.focus):'')+'</p></div>';
   h+=personChips('person',S.person);
-  h+='<div class="seg" role="group" aria-label="Session">'+days().map(d=>'<button data-act="day" data-v="'+esc(d.id)+'" aria-pressed="'+(d.id===S.dayId)+'"><b>'+esc(d.name)+'</b><span>'+esc(d.weekday||'')+'</span></button>').join('')+'</div>';
+  h+='<div class="seg" role="group" aria-label="Session">'+days().map(d=>'<button data-act="day" data-v="'+esc(d.id)+'" aria-pressed="'+(d.id===S.dayId)+'"><b>'+esc(d.name)+'</b><span>'+(S.person?(lastDone(S.person,d.id,S.date)?'Last '+esc(fmtDate(lastDone(S.person,d.id,S.date))):'Not done yet'):'&nbsp;')+'</span></button>').join('')+'</div>';
   h+='<div class="field"><label for="date">Date</label><input type="date" id="date" value="'+esc(S.date)+'" max="'+today()+'"></div>';
   if(!S.person)return h+'<div class="note">Pick who is training to load their last numbers.</div>';
   if(!day)return h;
@@ -321,17 +341,24 @@ function viewProgress(){
   const wk=mondayOf(today());
   h+='<div class="board">'+(names.length?names.map(n=>{
     const pl=personLogs(n);
-    const thisWeek=new Set(pl.filter(l=>new Date(l.date+'T00:00:00')>=wk).map(l=>l.date+l.dayId)).size;
-    const target=Math.max(days().length,1);
-    let dots='';for(let i=0;i<target;i++)dots+='<span class="dot'+(i<thisWeek?' on':'')+'" style="'+(i<thisWeek?'background:'+colourFor(n):'')+'"></span>';
-    return '<div class="mate"><span class="plate" style="background:'+colourFor(n)+';width:22px;height:22px"></span><div><b>'+esc(n)+'</b><div class="small muted">'+pl.length+' sessions logged</div></div><div class="dots" aria-label="'+thisWeek+' of '+target+' sessions this week">'+dots+'</div></div>';
+    const trained=new Set(pl.map(l=>l.date));
+    let dots='',count=0;
+    for(let i=0;i<7;i++){const d=new Date(wk);d.setDate(d.getDate()+i);const ds=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');const on=trained.has(ds);if(on)count++;
+      dots+='<span class="day7'+(on?' on':'')+(ds===today()?' now':'')+'" style="'+(on?'background:'+colourFor(n):'')+'" title="'+esc(fmtDate(ds))+'">'+'MTWTFSS'[i]+'</span>';}
+    return '<div class="mate"><span class="plate" style="background:'+colourFor(n)+';width:22px;height:22px"></span><div><b>'+esc(n)+'</b><div class="small muted">'+count+' this week, '+pl.length+' total</div></div><div class="dots" aria-label="Trained on '+count+' days this week">'+dots+'</div></div>';
   }).join(''):'<p class="muted small">Add the crew on the Crew tab.</p>')+'</div>';
   if(!names.length||!days().length)return h;
   if(!S.progPerson||!names.includes(S.progPerson))S.progPerson=S.person&&names.includes(S.person)?S.person:names[0];
   h+='<section><h2 class="sec-title">Lifts</h2>'+personChips('progperson',S.progPerson);
   const pl=personLogs(S.progPerson).slice().sort((a,b)=>a.date<b.date?-1:1);
-  for(const d of days()){
-    h+='<h3 style="font-size:22px;margin:18px 0 4px">'+esc(d.name)+'</h3>';
+  const recent=pl.slice(-8).reverse();
+  if(recent.length){h+='<h3 style="font-size:22px;margin:18px 0 4px">Recent sessions</h3>'+recent.map(l=>'<button class="sess" data-act="opensess" data-v="'+esc(l.id)+'"><b>'+esc(fmtDate(l.date))+'</b><span>'+esc(l.dayName||l.dayId)+', '+(l.entries||[]).reduce((n,e)=>n+(e.sets||[]).length,0)+' sets</span></button>').join('');}
+  const current=new Set();days().forEach(d=>(d.exercises||[]).forEach(ex=>current.add(ex.id)));
+  const retired=new Map();pl.forEach(l=>(l.entries||[]).forEach(e=>{if(!current.has(e.exId))retired.set(e.exId,{id:e.exId,name:e.name,sets:0,repMax:9999});}));
+  const groups=days().map(d=>({name:d.name,exercises:d.exercises||[]}));
+  if(retired.size)groups.push({name:'Previous lifts',exercises:[...retired.values()],retired:true});
+  for(const d of groups){
+    h+='<h3 style="font-size:22px;margin:18px 0 4px">'+esc(d.name)+'</h3>'+(d.retired?'<p class="small muted" style="margin:0">No longer in the programme. History kept.</p>':'');
     for(const ex of d.exercises||[]){
       const hist=pl.map(l=>({date:l.date,e:(l.entries||[]).find(e=>e.exId===ex.id)})).filter(x=>x.e&&x.e.sets&&x.e.sets.length);
       if(!hist.length){h+='<div class="prog-ex"><span class="name">'+esc(ex.name)+'</span><span class="sub">Not logged yet</span></div>';continue;}
@@ -351,7 +378,7 @@ function emptyProgramme(){
 }
 
 function dayList(ds){
-  return ds.map(d=>'<div class="day"><h3>'+esc(d.name)+' <span class="muted" style="font-size:16px;font-weight:600">'+esc(d.weekday||'')+'</span></h3><p class="small muted" style="margin:2px 0 0">'+esc(d.focus||'')+'</p><ol>'+(d.exercises||[]).map(ex=>'<li><span>'+esc(ex.name)+(ex.note?'<em>'+esc(ex.note)+'</em>':'')+'</span><span>'+ex.sets+' × '+ex.repMin+'–'+ex.repMax+'</span></li>').join('')+'</ol></div>').join('');
+  return ds.map(d=>'<div class="day"><h3>'+esc(d.name)+'</h3><p class="small muted" style="margin:2px 0 0">'+esc(d.focus||'')+'</p><ol>'+(d.exercises||[]).map(ex=>'<li><span>'+esc(ex.name)+(ex.note?'<em>'+esc(ex.note)+'</em>':'')+'</span><span>'+ex.sets+' × '+ex.repMin+'–'+ex.repMax+'</span></li>').join('')+'</ol></div>').join('');
 }
 
 function viewProgramme(){
@@ -361,8 +388,11 @@ function viewProgramme(){
   if(S.proposal){
     const p=S.proposal;
     h+='<section><h2 class="sec-title">Proposed version '+((S.program.version|0)+1)+'</h2><div class="note"><p style="margin-top:0">'+esc(p.summary)+'</p>'+(p.changes||[]).map(c=>'<div class="change">'+esc(c)+'</div>').join('')+'</div>'+dayList(p.days)+'<div class="row"><button class="btn accent" data-act="apply"'+(S.canWrite===false?' disabled':'')+'>Apply version '+((S.program.version|0)+1)+'</button><button class="btn ghost" data-act="discard">Discard</button></div></section>';
+  }else if(S.editing){
+    h+=editView();
   }else{
     h+=dayList(days());
+    if(S.canWrite!==false)h+='<button class="btn ghost block" data-act="startedit">Add or remove exercises</button>';
     if(S.ai){
       h+='<section><h2 class="sec-title">Adapt the programme</h2><p class="muted small">Claude reviews everyone’s logged numbers plus anything you add below, then proposes a new version. Nothing changes until someone applies it.</p>';
       h+='<textarea id="adapt" placeholder="For example: we have stalled on bench, two of us want more glute work, Sam has a sore shoulder">'+esc(S.adaptNote)+'</textarea>';
@@ -375,6 +405,33 @@ function viewProgramme(){
   return h;
 }
 
+function editView(){
+  let h='<p class="muted small">Changes save as a new programme version. Logged sessions are never deleted; a removed exercise keeps its history under Progress.</p>';
+  for(const d of S.editDays){
+    const f=S.addForm[d.id]||(S.addForm[d.id]={name:'',sets:'3',repMin:'8',repMax:'12'});
+    h+='<div class="day"><h3>'+esc(d.name)+'</h3><p class="small muted" style="margin:2px 0 0">'+esc(d.focus||'')+'</p><ol>';
+    h+=d.exercises.map(ex=>'<li><span>'+esc(ex.name)+'<em>'+ex.sets+' × '+ex.repMin+'–'+ex.repMax+'</em></span><button class="x" data-act="rmex" data-day="'+esc(d.id)+'" data-v="'+esc(ex.id)+'" aria-label="Remove '+esc(ex.name)+'">Remove</button></li>').join('');
+    h+='</ol><div class="addex"><input type="text" id="an-'+esc(d.id)+'" data-add="'+esc(d.id)+'" data-k="name" maxlength="60" placeholder="New exercise, e.g. Cable flyes" value="'+esc(f.name)+'">';
+    h+='<div class="addnums"><label>Sets<input id="as-'+esc(d.id)+'" data-add="'+esc(d.id)+'" data-k="sets" inputmode="numeric" value="'+esc(f.sets)+'"></label><label>Reps from<input id="a1-'+esc(d.id)+'" data-add="'+esc(d.id)+'" data-k="repMin" inputmode="numeric" value="'+esc(f.repMin)+'"></label><label>to<input id="a2-'+esc(d.id)+'" data-add="'+esc(d.id)+'" data-k="repMax" inputmode="numeric" value="'+esc(f.repMax)+'"></label></div>';
+    h+='<button class="btn" data-act="addex" data-v="'+esc(d.id)+'">Add to '+esc(d.name)+'</button></div></div>';
+  }
+  if(S.editChanges.length)h+='<div class="note"><b>Changes</b>'+S.editChanges.map(c=>'<div class="change">'+esc(c)+'</div>').join('')+'</div>';
+  h+='<div class="row"><button class="btn accent" data-act="saveedit"'+(!S.editChanges.length||S.saving?' disabled':'')+'>'+(S.saving?'<span class="spinner"></span>Saving':'Save as version '+((S.program.version|0)+1))+'</button><button class="btn ghost" data-act="canceledit">Cancel</button></div>';
+  return h;
+}
+async function saveEdit(){
+  if(!S.editChanges.length)return;
+  const empty=S.editDays.find(d=>!d.exercises.length);
+  if(empty){toast(empty.name+' needs at least one exercise.');return;}
+  const v=(S.program.version|0)+1;
+  const hist=(S.program.history||[]).slice(-19);
+  hist.push({version:v,date:today(),summary:S.editChanges.join('. ')+'.',changes:S.editChanges.slice()});
+  const program={version:v,updatedAt:new Date().toISOString(),days:S.editDays,history:hist};
+  S.saving=true;render();
+  try{await api('data',{action:'saveProgram',program,baseVersion:S.program.version|0});S.program=program;S.editing=false;S.draftKey='';toast('Version '+v+' saved for the crew.');}
+  catch(e){handleWriteErr(e);}
+  S.saving=false;render();
+}
 function viewCrew(){
   const names=crewNames();
   let h='<div class="hero"><h1>The crew</h1><p>Everyone gets a plate colour. Anyone can log for anyone.</p></div>';
@@ -446,8 +503,8 @@ async function adapt(){
   'CURRENT PROGRAMME (JSON):\n'+JSON.stringify(prog)+'\n\n'+
   'RECENT TRAINING (per person; exercise id -> latest sessions, kg×reps, BW = bodyweight):\n'+JSON.stringify(trainingSummary())+'\n\n'+
   'WHAT THE GROUP SAYS HAS CHANGED:\n'+(S.adaptNote.trim()||'(nothing added; base changes on the training data only)')+'\n\n'+
-  'RULES:\n- Make small, evidence-based changes; keep what is working. If the data shows steady progress and nobody asked for changes, keep the programme almost identical and say so.\n- Keep the same days and day ids unless the group asks otherwise.\n- Keep the existing id for any exercise you keep or adjust. New exercises get a new lowercase hyphenated id.\n- 4 to 7 exercises per day, 2 to 5 sets, repMin lower than repMax.\n- Use short "note" fields only where they help (technique cue, swap reason).\n- If anyone mentions pain or injury, swap to a pain-free alternative for that movement and add a note recommending they get it checked by a physio. Do not diagnose.\n- One plan for the whole group; individual loads are handled by each person.\n\n'+
-  'Return ONLY a JSON object, no other text: {"summary":"one or two sentences","changes":["each concrete change and why"],"days":[{"id":"","name":"","weekday":"Monday","focus":"","exercises":[{"id":"","name":"","sets":3,"repMin":8,"repMax":12,"note":""}]}]}';
+  'RULES:\n- Make small, evidence-based changes; keep what is working. If the data shows steady progress and nobody asked for changes, keep the programme almost identical and say so.\n- Sessions are done in rotation on whatever dates suit each person, not fixed weekdays. Use the logged dates to judge how often people actually train.\n- Keep the same sessions and session ids unless the group asks otherwise.\n- Keep the existing id for any exercise you keep or adjust. New exercises get a new lowercase hyphenated id.\n- 4 to 7 exercises per day, 2 to 5 sets, repMin lower than repMax.\n- Use short "note" fields only where they help (technique cue, swap reason).\n- If anyone mentions pain or injury, swap to a pain-free alternative for that movement and add a note recommending they get it checked by a physio. Do not diagnose.\n- One plan for the whole group; individual loads are handled by each person.\n\n'+
+  'Return ONLY a JSON object, no other text: {"summary":"one or two sentences","changes":["each concrete change and why"],"days":[{"id":"","name":"","focus":"","exercises":[{"id":"","name":"","sets":3,"repMin":8,"repMax":12,"note":""}]}]}';
   try{
     const res=(await api('adapt',{prompt})).result;
     const p=validProposal(res);
@@ -478,14 +535,38 @@ document.addEventListener('click',ev=>{
   const b=ev.target.closest('[data-act]');if(!b)return;
   const v=b.dataset.v,act=b.dataset.act;
   if(act==='tab'){S.tab=v;render();window.scrollTo(0,0);}
-  else if(act==='person'){S.person=v;ls('crew-lifts-person',v);render();}
-  else if(act==='day'){S.dayId=v;render();}
+  else if(act==='person'){S.person=v;S.dayAuto=true;ls('crew-lifts-person',v);render();}
+  else if(act==='day'){S.dayId=v;S.dayAuto=false;render();}
+  else if(act==='opensess'){const l=S.logs.find(x=>x.id===v);if(l){S.person=l.person;S.date=l.date;S.dayId=l.dayId;S.dayAuto=false;S.draftKey='';S.tab='log';render();window.scrollTo(0,0);}}
   else if(act==='addset'){const r=S.draft[v]||(S.draft[v]=[]);const p=r[r.length-1];r.push({kg:p?p.kg:'',reps:''});render();}
   else if(act==='dropset'){const r=S.draft[v];if(r&&r.length>1)r.pop();render();}
   else if(act==='save')saveSession();
   else if(act==='delsession')deleteSession();
   else if(act==='progperson'){S.progPerson=v;render();}
   else if(act==='adapt')adapt();
+  else if(act==='startedit'){S.editing=true;S.editDays=JSON.parse(JSON.stringify(days()));S.editChanges=[];S.addForm={};render();}
+  else if(act==='canceledit'){if(S.editChanges.length&&!confirm('Discard these changes?'))return;S.editing=false;render();}
+  else if(act==='saveedit')saveEdit();
+  else if(act==='rmex'){const d=S.editDays.find(x=>x.id===b.dataset.day);if(!d)return;const ex=d.exercises.find(x=>x.id===v);if(!ex)return;
+    if(d.exercises.length===1){toast(d.name+' needs at least one exercise.');return;}
+    d.exercises=d.exercises.filter(x=>x.id!==v);
+    const added=S.editChanges.indexOf('Added '+ex.name+' to '+d.name);
+    if(added>=0)S.editChanges.splice(added,1);else S.editChanges.push('Removed '+ex.name+' from '+d.name);
+    render();}
+  else if(act==='addex'){const d=S.editDays.find(x=>x.id===v);const f=S.addForm[v];if(!d||!f)return;
+    const name=f.name.trim().replace(/\s+/g,' ');
+    if(!name){toast('Type the exercise name first.');return;}
+    if(d.exercises.some(x=>x.name.toLowerCase()===name.toLowerCase())){toast(name+' is already in '+d.name+'.');return;}
+    const sets=Math.min(6,Math.max(1,Math.round(num(f.sets))||3));
+    let mn=Math.max(1,Math.round(num(f.repMin))||8),mx=Math.max(mn,Math.round(num(f.repMax))||mn);
+    // Reuse an old id when the exercise was in the programme before, so its history reconnects.
+    const old=S.logs.flatMap(l=>l.entries||[]).find(e=>e.name&&e.name.toLowerCase()===name.toLowerCase());
+    const taken=new Set(S.editDays.flatMap(x=>x.exercises.map(e=>e.id)));
+    let id=old&&!taken.has(old.exId)?old.exId:slug(name);while(taken.has(id))id+='-2';
+    d.exercises.push({id,name,sets,repMin:mn,repMax:mx});
+    const rm=S.editChanges.indexOf('Removed '+name+' from '+d.name);
+    if(rm>=0)S.editChanges.splice(rm,1);else S.editChanges.push('Added '+name+' to '+d.name);
+    S.addForm[v]={name:'',sets:'3',repMin:'8',repMax:'12'};render();}
   else if(act==='discard'){S.proposal=null;render();}
   else if(act==='apply')applyProposal();
   else if(act==='addname'){const n=S.newName.trim().replace(/\s+/g,' ');if(!n)return;if(crewNames().includes(n)){toast(n+' is already in the crew.');return;}S.newName='';saveCrew(crewNames().concat(n));}
@@ -498,11 +579,13 @@ document.addEventListener('click',ev=>{
 document.addEventListener('input',ev=>{
   const t=ev.target;
   if(t.dataset&&t.dataset.ex){const r=S.draft[t.dataset.ex];if(r&&r[+t.dataset.i])r[+t.dataset.i][t.dataset.f]=t.value;ls('crew-lifts-draft',JSON.stringify({key:S.draftKey,draft:S.draft}));}
+  else if(t.dataset&&t.dataset.add){const f=S.addForm[t.dataset.add];if(f)f[t.dataset.k]=t.value;}
   else if(t.id==='adapt')S.adaptNote=t.value;
   else if(t.id==='newname')S.newName=t.value;
 });
-document.addEventListener('change',ev=>{if(ev.target.id==='date'&&ev.target.value){S.date=ev.target.value;render();}});
+document.addEventListener('change',ev=>{if(ev.target.id==='date'&&ev.target.value){S.date=ev.target.value;S.dayAuto=true;render();}});
 document.addEventListener('keydown',ev=>{if(ev.key==='Enter'&&ev.target.id==='code'){ev.preventDefault();document.querySelector('[data-act="unlock"]').click();}
+  if(ev.key==='Enter'&&ev.target.dataset&&ev.target.dataset.add){ev.preventDefault();const bt=document.querySelector('[data-act="addex"][data-v="'+ev.target.dataset.add+'"]');if(bt)bt.click();}
   if(ev.key==='Enter'&&ev.target.id==='newname'){ev.preventDefault();document.querySelector('[data-act="addname"]').click();}});
 
 
